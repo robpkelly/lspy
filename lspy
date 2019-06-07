@@ -1,0 +1,41 @@
+#! /usr/bin/env python
+"""List the names exported by a python module"""
+
+import importlib
+import argparse
+import inspect
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('module', type=str, help="module to import")
+parser.add_argument('-p', '--private', action='store_true', help="include private names")
+parser.add_argument('-m', '--magic', action='store_true', help="include magic names")
+parser.add_argument('-a', '--all', action='store_true', help="include all names (equivalent to `-pm')")
+parser.add_argument('-g', '--grep', action='store_true', help="print modules as grep expression instead of one per line")
+args = parser.parse_args()
+
+def is_normal(name):
+    return not name.startswith('_')
+
+def is_magic(name):
+    return name.startswith('__') and name.endswith('__')
+
+def is_private(name):
+    return name.startswith('_') and not is_magic(name)
+
+filter_fn = is_normal
+if args.private:
+    filter_fn = lambda n: filter_fn(n) or is_private(n)
+if args.magic:
+    filter_fn = lambda n: filter_fn(n) or is_magic(n)
+if args.all:
+    filter_fn = lambda n: True
+
+module = importlib.import_module(args.module)
+
+visible_names = [name for name in dir(module) if filter_fn(name)]
+
+if args.grep:
+    print("\|".join(visible_names))
+else:
+    for name in visible_names:
+        print(name)
